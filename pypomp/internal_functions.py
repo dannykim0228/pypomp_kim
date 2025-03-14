@@ -1029,11 +1029,15 @@ def _mif_internal(theta, ys, rinit, rprocess, dmeasure, rprocesses, dmeasures, s
         logliks.append(loglik)
 
     for m in tqdm(range(M)):
+        print(f"Iteration {m}: RW step size (before update) = {sigmas}")  # For debugging
         sigmas *= a
         thetas += sigmas * np.random.normal(size=thetas.shape)
         loglik_ext, thetas = _perfilter_internal(thetas, ys, J, sigmas, rinit, rprocesses,
                                                  dmeasures, ndim=ndim, covars=covars, 
                                                  thresh=thresh)
+        print(f"Iteration {m}: Conditional LL = {loglik_ext}")  # For debugging
+        print(f"Iteration {m}: Particle traces (mean) = {thetas.mean(axis = 0)}")  # For debugging
+        print(f"Iteration {m}: Particle traces (first 5 particles) = {thetas[ :5]}")  # For debugging
 
         params.append(thetas)
 
