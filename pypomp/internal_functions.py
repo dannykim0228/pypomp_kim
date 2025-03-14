@@ -1013,9 +1013,21 @@ def _mif_internal(theta, ys, rinit, rprocess, dmeasure, rprocesses, dmeasures, s
         tuple: A tuple containing:
         - An array of negative log-likelihood through the iterations
         - An array of parameters through the iterations 
+
+    
+    <For debugging>
+
+        - logliks (array): Conditional LL at each iteration
+        - params (array): Estimated parameters at each iteration
+        - particle_traces (array): All particles at each iteration
+        - perturbations (array): Step sizes at each iteration
+        
     """
     logliks = []
     params = []
+    particle_traces = [] # For debugging
+    perturbations = [] # For debugging
+    
 
     ndim = theta.ndim
     thetas = theta + sigmas_init * np.random.normal(size=(J,) + theta.shape[-ndim:])
@@ -1028,18 +1040,19 @@ def _mif_internal(theta, ys, rinit, rprocess, dmeasure, rprocesses, dmeasures, s
                        for i in range(MONITORS)]))
         logliks.append(loglik)
 
-    for m in tqdm(range(M)):
-        print(f"Iteration {m}: RW step size (before update) = {sigmas}")  # For debugging
+    #for m in tqdm(range(M)):
+    for m in range(M):
+        perturbations.append(sigmas) # For debugging
+
         sigmas *= a
         thetas += sigmas * np.random.normal(size=thetas.shape)
         loglik_ext, thetas = _perfilter_internal(thetas, ys, J, sigmas, rinit, rprocesses,
                                                  dmeasures, ndim=ndim, covars=covars, 
                                                  thresh=thresh)
-        print(f"Iteration {m}: Conditional LL = {loglik_ext}")  # For debugging
-        print(f"Iteration {m}: Particle traces (mean) = {thetas.mean(axis = 0)}")  # For debugging
-        print(f"Iteration {m}: Particle traces (first 5 particles) = {thetas[ :5]}")  # For debugging
-
-        params.append(thetas)
+        # why loglik_ext is here?
+        logliks.append(loglik_ext) # For debugging
+        particle_traces.append(thetas.copy())  # For debugging
+        params.append(thetas) 
 
         if monitor:
             loglik = jnp.mean(jnp.array(
@@ -1053,7 +1066,20 @@ def _mif_internal(theta, ys, rinit, rprocess, dmeasure, rprocesses, dmeasures, s
                 print(loglik)
                 print(thetas.mean(0))
 
-    return jnp.array(logliks), jnp.array(params)
+    #return jnp.array(logliks), jnp.array(params)
+    # Convert lists to numpy arrays for easier analysis
+
+    return {
+
+        "logliks": jnp.array(logliks),
+
+        "params": jnp.array(params),
+
+        "particle_traces": jnp.array(particle_traces), # For debugging
+
+        "perturbations": jnp.array(perturbations) # For debugging
+
+    }
 
 
 def _train_internal(theta_ests, ys, rinit, rprocess, dmeasure, covars=None, J=5000, Jh=1000, 
